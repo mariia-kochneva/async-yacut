@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block title %}YaCut - загрузка файлов{% endblock %}
+
+{% block content %}
+  <h1 class="text-center"><span style="color:red">Ya</span>Cut</h1>
+  <p class="text-center my-4">
+    Загрузите файлы на Яндекс Диск и получите короткие ссылки для скачивания
+  </p>
+
+  <div class="container">
+    <div class="row my-3">
+      <div class="col-sm">
+      </div>
+      <div class="col-sm">
+        <form method="POST" enctype="multipart/form-data" action="{{ url_for('files_page') }}">
+          {{ form.csrf_token }}
+          
+          <div>
+            {{ form.files(class="form-control-file mb-3", multiple="multiple") }}
+            {% if form.files.errors %}
+              {% for error in form.files.errors %}
+                <p><span style="color:red">{{ error }}</span></p>
+              {% endfor %}
+            {% endif %}
+            
+            {{ form.submit(class="btn btn-primary") }}
+          </div>
+        </form>
+      </div>
+      <div class="col-sm">
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="row">
+      <div class="col-sm">
+      </div>
+      <div class="col-sm">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} text-center">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+        
+        {% if uploaded_files %}
+          <div class="card mt-4">
+            <div class="card-header">
+              <h5 class="text-center">Загруженные файлы</h5>
+            </div>
+            <div class="card-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Имя файла</th>
+                    <th>Короткая ссылка</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for file in uploaded_files %}
+                    <tr>
+                      <td>{{ file.filename }}</td>
+                      <td><a href="{{ file.short_url }}" target="_blank">{{ file.short_url }}</a></td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+      <div class="col-sm">
+      </div>
+    </div>
+  </div>
+{% endblock %}
