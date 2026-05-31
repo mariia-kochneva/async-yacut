@@ -5,14 +5,13 @@ import time
 from werkzeug.utils import secure_filename
 from flask import render_template, redirect, flash, request
 
-from yacut import db, app
-from yacut.models import URLMap
-from yacut.forms import URLMapForm, FileUploadForm
-from yacut.utils import get_unique_short_id
-from yacut.yandex_disk import (
+from yacut import app
+from .forms import URLMapForm, FileUploadForm
+from .yandex_disk import (
     get_download_link,
     upload_file_to_yandex
 )
+from .services import URLMapService
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -21,20 +20,17 @@ def index():
     form = URLMapForm()
     if form.validate_on_submit():
         original = form.original_link.data
-        custom_id = form.custom_id.data
-        if not custom_id:
-            short = get_unique_short_id(db.session)
-        else:
-            short = custom_id
-        url_map = URLMap(
-            original=original,
-            short=short
-        )
-        db.session.add(url_map)
-        db.session.commit()
-        short_url = request.host_url + short
-        flash(f'Короткая ссылка: {short_url}', 'success')
-        return render_template('index.html', form=form, short_url=short_url)
+        custom_id = form.custom_id.data or None
+        try:
+            url_map = URLMapService.create_short_link(original, custom_id)
+            short_url = request.host_url + url_map.short
+            flash(f'Короткая ссылка: {short_url}', 'success')
+            return render_template(
+                'index.html', form=form, short_url=short_url
+            )
+        except ValueError as e:
+            flash(str(e), 'danger')
+            return render_template('index.html', form=form)
     return render_template('index.html', form=form)
 
 
@@ -50,7 +46,9 @@ def run_async(coro):
 @app.route('/<string:short_id>')
 def redirect_to_url(short_id):
     """Редирект по короткой ссылке."""
-    url_map = URLMap.query.filter_by(short=short_id).first_or_404()
+    url_map = URLMapService.get_original_url(short_id)
+    if url_map is None:
+        return render_template('404.html'), 404
     if url_map.original.startswith(('app:/', 'disk:/')):
         async def fetch():
             async with aiohttp.ClientSession() as session:
@@ -130,14 +128,10 @@ async def upload_one_file(session, file, index):
     try:
         await upload_file_to_yandex(session, file_data, disk_path)
         await get_download_link(session, disk_path)
-        with app.app_context():
-            short_id = get_unique_short_id(db.session)
-            url_map = URLMap(original=disk_path, short=short_id)
-            db.session.add(url_map)
-            db.session.commit()
+        url_map = URLMapService.create_short_link(disk_path)
         return {
             'filename': display_name,
-            'short_id': short_id,
+            'short_id': url_map.short,
         }
     except Exception as e:
         return {

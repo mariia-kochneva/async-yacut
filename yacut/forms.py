@@ -5,7 +5,8 @@ from wtforms.validators import (
 )
 from flask_wtf.file import FileField, FileRequired, FileAllowed
 
-from yacut.models import URLMap
+from .models import URLMap
+from .constants import MAX_ORIGINAL_LENGTH, MAX_SHORT_LENGTH
 
 
 RESERVED_SHORT_ID = 'files'
@@ -19,7 +20,8 @@ class URLMapForm(FlaskForm):
             DataRequired(message='Обязательное поле'),
             URL(message='Введите корректный URL'),
             Length(
-                max=256, message='Ссылка не может быть длиннее 256 символов'
+                max=MAX_ORIGINAL_LENGTH,
+                message='Ссылка не может быть длиннее 256 символов'
             )
         ]
     )
@@ -27,7 +29,7 @@ class URLMapForm(FlaskForm):
         'Ваш вариант короткой ссылки',
         validators=[
             Length(
-                max=16,
+                max=MAX_SHORT_LENGTH,
                 message='Короткая ссылка не может быть длиннее 16 символов'
             ),
             Optional(),
