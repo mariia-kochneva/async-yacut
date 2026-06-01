@@ -6,10 +6,10 @@ from wtforms.validators import (
 from flask_wtf.file import FileField, FileRequired, FileAllowed
 
 from .models import URLMap
-from .constants import MAX_ORIGINAL_LENGTH, MAX_SHORT_LENGTH
-
-
-RESERVED_SHORT_ID = 'files'
+from .constants import (
+    MAX_ORIGINAL_LENGTH, MAX_SHORT_LENGTH, SHORT_ID_PATTERN,
+    RESERVED_SHORT_ID
+)
 
 
 class URLMapForm(FlaskForm):
@@ -34,7 +34,7 @@ class URLMapForm(FlaskForm):
             ),
             Optional(),
             Regexp(
-                r'^[a-zA-Z0-9]+$',
+                SHORT_ID_PATTERN,
                 message=(
                     'Короткая ссылка может содержать только '
                     'латинские буквы и цифры'

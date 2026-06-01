@@ -1,11 +1,7 @@
-import re
-
 from flask import jsonify, request
 
-from . import app, db
-from .error_handlers import InvalidAPIUsage
-from .models import URLMap
-from .utils import get_unique_short_id
+from . import app
+from .services import URLMapService
 
 
 @app.route('/api/id/', methods=['POST'])
@@ -17,44 +13,22 @@ def create_short_link():
     if 'url' not in data:
         return jsonify({'message': '"url" является обязательным полем!'}), 400
     original = data['url']
-    custom_id = data.get('custom_id', '')
-    if custom_id:
-        if not re.match(r'^[a-zA-Z0-9]+$', custom_id):
-            return jsonify(
-                {'message': 'Указано недопустимое имя для короткой ссылки'}
-            ), 400
-        if len(custom_id) > 16:
-            return jsonify(
-                {'message': 'Указано недопустимое имя для короткой ссылки'}
-            ), 400
-        if custom_id == 'files':
-            return jsonify(
-                {'message': 'Указано недопустимое имя для короткой ссылки'}
-            ), 400
-        if URLMap.query.filter_by(short=custom_id).first():
-            return jsonify(
-                {
-                    'message':
-                    'Предложенный вариант короткой ссылки уже существует.'
-                }
-            ), 400
-        short = custom_id
-    else:
-        short = get_unique_short_id(db.session)
-    url_map = URLMap(original=original, short=short)
-    db.session.add(url_map)
-    db.session.commit()
-    short_link = request.host_url + short
-    return jsonify({
-        'url': original,
-        'short_link': short_link
-    }), 201
+    custom_id = data.get('custom_id', '') or None
+    try:
+        url_map = URLMapService.create_short_link(original, custom_id)
+        short_link = request.host_url + url_map.short
+        return jsonify({
+            'url': original,
+            'short_link': short_link
+        }), 201
+    except ValueError as e:
+        return jsonify({'message': str(e)}), 400
 
 
 @app.route('/api/id/<string:short_id>/', methods=['GET'])
 def get_original_link(short_id):
     """API: получение оригинальной ссылки по короткому идентификатору."""
-    url_map = URLMap.query.filter_by(short=short_id).first()
+    url_map = URLMapService.get_original_url(short_id)
     if url_map is None:
-        raise InvalidAPIUsage('Указанный id не найден', 404)
+        return jsonify({'message': 'Указанный id не найден'}), 404
     return jsonify({'url': url_map.original}), 200
