@@ -4,3 +4,4 @@ SHORT_ID_PATTERN = r'^[a-zA-Z0-9]+$'
 DEFAULT_SHORT_ID_LENGTH = 6
 MAX_GENERATION_ATTEMPTS = 100
 RESERVED_SHORT_ID = 'files'
+INVALID_SHORT_ID_MSG = 'Указано недопустимое имя для короткой ссылки'
